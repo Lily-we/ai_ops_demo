@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI_OPS — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #080c10;
+      --surface: #0d1219;
+      --surface2: #111820;
+      --border: #1a2535;
+      --accent: #00e5ff;
+      --accent2: #7b5cfa;
+      --warn: #ff6b35;
+      --green: #00ff9d;
+      --text: #e8edf2;
+      --muted: #4a6080;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 40px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      font-family: 'Space Mono', monospace; font-size: 14px;
+      color: var(--accent); letter-spacing: 0.08em;
+    }
+    .logo span { color: var(--muted); }
+    .nav-links { display: flex; gap: 28px; align-items: center; }
+    .nav-links a {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+      color: var(--muted); text-decoration: none; text-transform: uppercase;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--accent); }
+    .nav-run {
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      padding: 8px 18px; border: 1px solid var(--accent);
+      color: var(--accent); text-decoration: none;
+      transition: all 0.2s;
+    }
+    .nav-run:hover { background: var(--accent); color: var(--bg); }
+
+    /* LAYOUT */
+    .layout {
+      display: grid;
+      grid-template-columns: 220px 1fr 300px;
+      min-height: calc(100vh - 57px);
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      padding: 28px 0;
+    }
+    .sidebar-section { margin-bottom: 32px; }
+    .sidebar-label {
+      font-family: 'Space Mono', monospace; font-size: 9px;
+      color: var(--muted); letter-spacing: 0.18em;
+      text-transform: uppercase; padding: 0 24px; margin-bottom: 8px;
+    }
+    .sidebar-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 24px; cursor: pointer;
+      font-size: 13px; font-weight: 600; color: var(--muted);
+      transition: all 0.18s; border-left: 2px solid transparent;
+    }
+    .sidebar-item:hover { color: var(--text); background: var(--surface); }
+    .sidebar-item.active {
+      color: var(--accent); border-left-color: var(--accent);
+      background: rgba(0,229,255,0.04);
+    }
+    .sidebar-item .icon { font-size: 15px; width: 20px; }
+    .sidebar-badge {
+      margin-left: auto;
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      background: rgba(0,229,255,0.12); color: var(--accent);
+      padding: 2px 7px;
+    }
+    .sidebar-badge.warn {
+      background: rgba(255,107,53,0.12); color: var(--warn);
+    }
+
+    /* MAIN */
+    .main { padding: 32px 36px; overflow-y: auto; }
+
+    .main-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 28px;
+    }
+    .main-title { font-size: 26px; font-weight: 800; }
+    .main-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    .date-badge {
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      color: var(--muted); letter-spacing: 0.06em;
+    }
+
+    /* METRIC TILES */
+    .metrics {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 12px; margin-bottom: 28px;
+    }
+    .metric {
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 20px; transition: border-color 0.2s;
+    }
+    .metric:hover { border-color: var(--accent); }
+    .metric-label {
+      font-family: 'Space Mono', monospace; font-size: 9px;
+      letter-spacing: 0.14em; color: var(--muted);
+      text-transform: uppercase; margin-bottom: 10px;
+    }
+    .metric-val {
+      font-family: 'Space Mono', monospace;
+      font-size: 30px; font-weight: 700; letter-spacing: -0.02em;
+    }
+    .metric-val.green { color: var(--green); }
+    .metric-val.accent { color: var(--accent); }
+    .metric-val.warn { color: var(--warn); }
+    .metric-val.purple { color: var(--accent2); }
+    .metric-delta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* TABS */
+    .tabs {
+      display: flex; gap: 0; margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 10px 20px; cursor: pointer;
+      color: var(--muted); border-bottom: 2px solid transparent;
+      margin-bottom: -1px; transition: all 0.18s;
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab:hover { color: var(--text); }
+
+    /* TASK TABLE */
+    .task-table { width: 100%; border-collapse: collapse; }
+    .task-table th {
+      font-family: 'Space Mono', monospace; font-size: 9px;
+      letter-spacing: 0.14em; color: var(--muted);
+      text-transform: uppercase; padding: 10px 14px; text-align: left;
+      border-bottom: 1px solid var(--border); font-weight: 400;
+    }
+    .task-table td {
+      padding: 14px; border-bottom: 1px solid rgba(26,37,53,0.5);
+      font-size: 13px; vertical-align: middle;
+    }
+    .task-table tr { transition: background 0.15s; }
+    .task-table tr:hover td { background: var(--surface); }
+
+    .priority-dot {
+      width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+      margin-right: 8px;
+    }
+    .priority-dot.high { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+    .priority-dot.medium { background: #f59e0b; }
+    .priority-dot.low { background: var(--muted); }
+
+    .status-tag {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      padding: 3px 10px; letter-spacing: 0.06em;
+      display: inline-block;
+    }
+    .status-tag.todo { border: 1px solid var(--border); color: var(--muted); }
+    .status-tag.in-progress { border: 1px solid var(--accent); color: var(--accent); }
+    .status-tag.blocked { border: 1px solid var(--warn); color: var(--warn); }
+    .status-tag.done { border: 1px solid var(--green); color: var(--green); }
+
+    .avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: var(--bg);
+    }
+
+    /* RIGHT PANEL */
+    .right-panel {
+      border-left: 1px solid var(--border);
+      padding: 28px 24px;
+      overflow-y: auto;
+    }
+    .rp-section { margin-bottom: 32px; }
+    .rp-label {
+      font-family: 'Space Mono', monospace; font-size: 9px;
+      letter-spacing: 0.18em; color: var(--muted);
+      text-transform: uppercase; margin-bottom: 14px;
+    }
+
+    /* MEMORY LOG */
+    .memory-item {
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+      font-size: 12px; line-height: 1.6;
+    }
+    .memory-item:last-child { border-bottom: none; }
+    .memory-time {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      color: var(--accent); margin-bottom: 4px;
+    }
+    .memory-text { color: var(--muted); }
+    .memory-text strong { color: var(--text); }
+
+    /* CALENDAR WIDGET */
+    .cal-item {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .cal-item:last-child { border-bottom: none; }
+    .cal-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 4px;
+    }
+    .cal-info { flex: 1; }
+    .cal-title { font-size: 13px; font-weight: 600; }
+    .cal-when {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      color: var(--muted); margin-top: 3px;
+    }
+
+    /* AGENT HEALTH */
+    .agent-health {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .ah-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .ah-name {
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      color: var(--muted); width: 100px; flex-shrink: 0;
+    }
+    .ah-bar {
+      flex: 1; height: 4px; background: var(--border); overflow: hidden;
+    }
+    .ah-fill { height: 100%; border-radius: 0; }
+    .ah-val {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      color: var(--text); width: 34px; text-align: right;
+    }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar, .right-panel { display: none; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">AI_OPS<span>_</span></div>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="demo.html">Demo</a>
+    <a href="dashboard.html" class="active">Dashboard</a>
+    <a href="demo.html" class="nav-run">+ New Input</a>
+  </div>
+</nav>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Workspace</div>
+      <div class="sidebar-item active">
+        <span class="icon">⊞</span> All Tasks
+        <span class="sidebar-badge">14</span>
+      </div>
+      <div class="sidebar-item">
+        <span class="icon">▶</span> In Progress
+        <span class="sidebar-badge">4</span>
+      </div>
+      <div class="sidebar-item">
+        <span class="icon">🚫</span> Blocked
+        <span class="sidebar-badge warn">3</span>
+      </div>
+      <div class="sidebar-item">
+        <span class="icon">✓</span> Completed
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Agents</div>
+      <div class="sidebar-item">
+        <span class="icon">⬡</span> Memory Graph
+      </div>
+      <div class="sidebar-item">
+        <span class="icon">📅</span> Calendar Sync
+      </div>
+      <div class="sidebar-item">
+        <span class="icon">⚙</span> Integrations
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Team</div>
+      <div class="sidebar-item">
+        <span class="icon">👤</span> Amir
+      </div>
+      <div class="sidebar-item">
+        <span class="icon">👤</span> Sara
+      </div>
+      <div class="sidebar-item">
+        <span class="icon">👤</span> Zara
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="main-header">
+      <div>
+        <div class="main-title">Operations Overview</div>
+        <div class="main-sub">AI_OPS has processed 6 sessions · Last sync 4 min ago</div>
+      </div>
+      <div class="date-badge" id="dateEl"></div>
+    </div>
+
+    <!-- METRICS -->
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Active Tasks</div>
+        <div class="metric-val accent">14</div>
+        <div class="metric-delta">↑ 3 from last session</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Completed Today</div>
+        <div class="metric-val green">7</div>
+        <div class="metric-delta">↑ 2 vs yesterday</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Blockers</div>
+        <div class="metric-val warn">3</div>
+        <div class="metric-delta">Requires attention</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Sessions in Memory</div>
+        <div class="metric-val purple">6</div>
+        <div class="metric-delta">Cross-session context active</div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" onclick="setTab(this,'all')">All Tasks</div>
+      <div class="tab" onclick="setTab(this,'blockers')">Blockers</div>
+      <div class="tab" onclick="setTab(this,'calendar')">Calendar</div>
+    </div>
+
+    <!-- TABLE -->
+    <table class="task-table" id="taskTable">
+      <thead>
+        <tr>
+          <th>Task</th>
+          <th>Owner</th>
+          <th>Priority</th>
+          <th>Deadline</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="taskBody"></tbody>
+    </table>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+
+    <!-- AGENT HEALTH -->
+    <div class="rp-section">
+      <div class="rp-label">// Agent Performance</div>
+      <div class="agent-health">
+        <div class="ah-row">
+          <div class="ah-name">Extractor</div>
+          <div class="ah-bar"><div class="ah-fill" style="width:94%;background:var(--green)"></div></div>
+          <div class="ah-val">94%</div>
+        </div>
+        <div class="ah-row">
+          <div class="ah-name">Validator</div>
+          <div class="ah-bar"><div class="ah-fill" style="width:88%;background:var(--accent)"></div></div>
+          <div class="ah-val">88%</div>
+        </div>
+        <div class="ah-row">
+          <div class="ah-name">Planner</div>
+          <div class="ah-bar"><div class="ah-fill" style="width:91%;background:var(--accent2)"></div></div>
+          <div class="ah-val">91%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALENDAR -->
+    <div class="rp-section">
+      <div class="rp-label">// Upcoming Events</div>
+      <div class="cal-item">
+        <div class="cal-dot" style="background:var(--accent)"></div>
+        <div class="cal-info">
+          <div class="cal-title">Client Demo — Staging</div>
+          <div class="cal-when">Fri · 3:00 PM</div>
+        </div>
+      </div>
+      <div class="cal-item">
+        <div class="cal-dot" style="background:var(--accent2)"></div>
+        <div class="cal-info">
+          <div class="cal-title">Sprint Retrospective</div>
+          <div class="cal-when">Wed · 11:00 AM</div>
+        </div>
+      </div>
+      <div class="cal-item">
+        <div class="cal-dot" style="background:#f59e0b"></div>
+        <div class="cal-info">
+          <div class="cal-title">Investor Follow-up</div>
+          <div class="cal-when">2 weeks from now</div>
+        </div>
+      </div>
+      <div class="cal-item">
+        <div class="cal-dot" style="background:var(--green)"></div>
+        <div class="cal-info">
+          <div class="cal-title">Daily Standup</div>
+          <div class="cal-when">Daily · 10:00 AM</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEMORY LOG -->
+    <div class="rp-section">
+      <div class="rp-label">// Memory Log</div>
+      <div class="memory-item">
+        <div class="memory-time">SESSION 6 · Today</div>
+        <div class="memory-text"><strong>3 blockers</strong> detected. Auth token still unresolved from DevOps.</div>
+      </div>
+      <div class="memory-item">
+        <div class="memory-time">SESSION 5 · Yesterday</div>
+        <div class="memory-text"><strong>Sara</strong> committed to Figma screens by Thursday — not yet delivered.</div>
+      </div>
+      <div class="memory-item">
+        <div class="memory-time">SESSION 4 · 2 days ago</div>
+        <div class="memory-text"><strong>README</strong> task unassigned for 2+ weeks. Validator flagged as orphaned.</div>
+      </div>
+      <div class="memory-item">
+        <div class="memory-time">SESSION 3 · 4 days ago</div>
+        <div class="memory-text">Client demo date confirmed. <strong>Staging deploy</strong> critical path item created.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // DATE
+  const d = new Date();
+  document.getElementById('dateEl').textContent =
+    d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }).toUpperCase();
+
+  // TASK DATA
+  const ALL_TASKS = [
+    { title: 'Deploy staging environment', owner: 'Amir', ownerColor: '#00e5ff', priority: 'high', deadline: 'Fri · EOD', status: 'blocked' },
+    { title: 'Finish Figma screens', owner: 'Sara', ownerColor: '#7b5cfa', priority: 'high', deadline: 'Thu', status: 'in-progress' },
+    { title: 'Write revised client proposal', owner: 'You', ownerColor: '#00ff9d', priority: 'high', deadline: 'Today · EOD', status: 'in-progress' },
+    { title: 'Write project README', owner: '—', ownerColor: '#ff6b35', priority: 'medium', deadline: 'Overdue', status: 'blocked' },
+    { title: 'Get auth token from DevOps', owner: 'Amir', ownerColor: '#00e5ff', priority: 'high', deadline: 'Urgent', status: 'blocked' },
+    { title: 'Schedule sprint retrospective', owner: 'You', ownerColor: '#00ff9d', priority: 'medium', deadline: 'Before Wed', status: 'todo' },
+    { title: 'Fix competitor matrix slide', owner: 'Zara', ownerColor: '#f59e0b', priority: 'medium', deadline: 'This week', status: 'in-progress' },
+    { title: 'Review term sheet with lawyer', owner: 'You', ownerColor: '#00ff9d', priority: 'high', deadline: 'Next Fri', status: 'todo' },
+    { title: 'Update pitch deck — team slide', owner: 'Zara', ownerColor: '#f59e0b', priority: 'medium', deadline: 'This week', status: 'todo' },
+    { title: 'Book investor follow-up call', owner: 'You', ownerColor: '#00ff9d', priority: 'medium', deadline: '2 weeks', status: 'done' },
+    { title: 'Renew domain registration', owner: 'Amir', ownerColor: '#00e5ff', priority: 'high', deadline: '10 days', status: 'todo' },
+    { title: 'Fix market sizing TAM slide', owner: 'Zara', ownerColor: '#f59e0b', priority: 'medium', deadline: 'This week', status: 'done' },
+    { title: 'MVP frontend functional', owner: 'Sara', ownerColor: '#7b5cfa', priority: 'high', deadline: 'Next week', status: 'in-progress' },
+    { title: 'Update standup time in calendar', owner: 'You', ownerColor: '#00ff9d', priority: 'low', deadline: 'Monday', status: 'done' },
+  ];
+
+  let currentTab = 'all';
+
+  function setTab(el, tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    currentTab = tab;
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('taskBody');
+    tbody.innerHTML = '';
+    let data = ALL_TASKS;
+    if (currentTab === 'blockers') data = ALL_TASKS.filter(t => t.status === 'blocked');
+    if (currentTab === 'calendar') data = ALL_TASKS.filter(t => t.deadline && t.deadline !== '—');
+
+    data.forEach((t, i) => {
+      const tr = document.createElement('tr');
+      tr.style.animationDelay = (i * 0.04) + 's';
+      tr.innerHTML = `
+        <td>
+          <span class="priority-dot ${t.priority}"></span>${t.title}
+        </td>
+        <td>
+          ${t.owner !== '—'
+            ? `<span class="avatar" style="background:${t.ownerColor}">${t.owner[0]}</span> <span style="font-size:13px;margin-left:8px">${t.owner}</span>`
+            : `<span style="color:var(--warn);font-size:12px">⚠ Unassigned</span>`}
+        </td>
+        <td>
+          <span style="font-family:'Space Mono',monospace;font-size:11px;color:${
+            t.priority==='high'?'var(--warn)':t.priority==='medium'?'#f59e0b':'var(--muted)'
+          }">${t.priority.toUpperCase()}</span>
+        </td>
+        <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--muted)">${t.deadline || '—'}</td>
+        <td><span class="status-tag ${t.status}">${t.status.replace('-',' ')}</span></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  renderTable();
+</script>
+</body>
+</html>

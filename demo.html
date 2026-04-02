@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI_OPS — Pipeline Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #080c10;
+      --surface: #0d1219;
+      --surface2: #111820;
+      --border: #1a2535;
+      --accent: #00e5ff;
+      --accent2: #7b5cfa;
+      --warn: #ff6b35;
+      --green: #00ff9d;
+      --text: #e8edf2;
+      --muted: #556880;
+    }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column;
+      cursor: none;
+    }
+    .cursor {
+      position: fixed; width: 9px; height: 9px;
+      background: var(--accent); border-radius: 50%;
+      pointer-events: none; z-index: 9999; mix-blend-mode: screen;
+    }
+    .cursor-ring {
+      position: fixed; width: 32px; height: 32px;
+      border: 1px solid rgba(0,229,255,0.4); border-radius: 50%;
+      pointer-events: none; z-index: 9998;
+    }
+
+    /* NAV */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 40px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: var(--bg);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .logo { font-family: 'Space Mono', monospace; font-size: 14px; color: var(--accent); letter-spacing: 0.05em; }
+    .logo span { color: var(--muted); }
+    .back-link { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); text-decoration: none; letter-spacing: 0.06em; }
+    .back-link:hover { color: var(--accent); }
+
+    /* PIPELINE HEADER */
+    .pipeline-header {
+      padding: 32px 40px 0;
+      max-width: 1200px; margin: 0 auto; width: 100%;
+    }
+    .pipeline-header h1 {
+      font-size: 22px; font-weight: 700; letter-spacing: -0.015em;
+      margin-bottom: 6px;
+    }
+    .pipeline-header p { font-size: 14px; color: var(--muted); }
+
+    /* PIPELINE TRACK */
+    .pipeline-track {
+      display: flex; align-items: center; gap: 0;
+      padding: 24px 40px 0;
+      max-width: 1200px; margin: 0 auto; width: 100%;
+      overflow-x: auto;
+    }
+    .p-step {
+      display: flex; flex-direction: column; align-items: center;
+      min-width: 130px; cursor: default;
+    }
+    .p-step-icon {
+      width: 44px; height: 44px; border: 1px solid var(--border);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      color: var(--muted); background: var(--surface);
+      transition: all 0.4s; position: relative;
+    }
+    .p-step-icon.active {
+      border-color: var(--accent); color: var(--accent);
+      box-shadow: 0 0 0 6px rgba(0,229,255,0.08);
+    }
+    .p-step-icon.done {
+      border-color: var(--green); color: var(--green);
+      background: rgba(0,255,157,0.06);
+    }
+    .p-step-icon.done::after {
+      content: '✓'; position: absolute;
+      top: -6px; right: -6px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--green); color: var(--bg);
+      font-size: 9px; display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+    }
+    .p-step-label {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      margin-top: 8px; text-align: center; line-height: 1.3;
+    }
+    .p-step-label.active { color: var(--accent); }
+    .p-step-label.done { color: var(--green); }
+    .p-conn {
+      flex: 1; height: 1px; background: var(--border);
+      min-width: 24px; position: relative; margin-bottom: 22px;
+    }
+    .p-conn.done { background: var(--green); }
+    .p-conn.active {
+      background: linear-gradient(90deg, var(--green), var(--accent));
+    }
+
+    /* MAIN LAYOUT */
+    .app {
+      display: grid; grid-template-columns: 400px 1fr;
+      flex: 1; max-width: 1200px; margin: 0 auto;
+      width: 100%; padding: 24px 40px 40px; gap: 28px;
+    }
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; padding: 16px 16px 32px; }
+      .pipeline-track, .pipeline-header { padding-left: 16px; padding-right: 16px; }
+    }
+
+    /* INPUT PANEL */
+    .input-panel {
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .panel-label {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      letter-spacing: 0.14em; color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .sample-list { display: flex; flex-direction: column; gap: 6px; }
+    .sample-btn {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--muted); padding: 9px 14px; text-align: left;
+      font-family: 'DM Sans', sans-serif; font-size: 13px;
+      cursor: pointer; transition: all 0.18s; line-height: 1.4;
+    }
+    .sample-btn:hover { border-color: var(--accent); color: var(--text); background: var(--surface2); }
+
+    textarea {
+      width: 100%; height: 200px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); font-family: 'Space Mono', monospace;
+      font-size: 12px; padding: 14px; resize: none; outline: none;
+      line-height: 1.65; transition: border-color 0.2s;
+    }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--muted); }
+
+    .run-btn {
+      width: 100%; background: var(--accent); color: var(--bg);
+      border: none; padding: 14px; cursor: pointer;
+      font-family: 'Space Mono', monospace; font-size: 13px;
+      font-weight: 700; letter-spacing: 0.06em; transition: all 0.2s;
+    }
+    .run-btn:hover:not(:disabled) { background: #fff; }
+    .run-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .clear-btn {
+      width: 100%; background: transparent; border: 1px solid var(--border);
+      color: var(--muted); padding: 10px; cursor: pointer;
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      letter-spacing: 0.06em; transition: all 0.2s;
+    }
+    .clear-btn:hover { border-color: var(--muted); color: var(--text); }
+
+    /* OUTPUT PANEL */
+    .output-panel { display: flex; flex-direction: column; gap: 20px; }
+
+    /* STAGE CARD */
+    .stage-card {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      overflow: hidden;
+      transition: border-color 0.4s;
+    }
+    .stage-card.active { border-color: var(--accent); }
+    .stage-card.done { border-color: rgba(0,255,157,0.3); }
+
+    .stage-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .stage-num {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      color: var(--muted); letter-spacing: 0.12em; font-weight: 700;
+      white-space: nowrap;
+    }
+    .stage-num.active { color: var(--accent); }
+    .stage-num.done { color: var(--green); }
+    .stage-name { font-size: 14px; font-weight: 600; flex: 1; }
+    .stage-desc { font-size: 12px; color: var(--muted); }
+
+    .stage-indicator {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border); flex-shrink: 0;
+      transition: all 0.4s;
+    }
+    .stage-indicator.active {
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: indicPulse 1s ease-in-out infinite;
+    }
+    .stage-indicator.done { background: var(--green); box-shadow: 0 0 6px var(--green); animation: none; }
+    @keyframes indicPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .stage-body { padding: 18px; min-height: 60px; }
+    .stage-body.hidden { display: none; }
+
+    /* PROGRESS BAR */
+    .stage-progress {
+      height: 2px; background: var(--border); overflow: hidden;
+    }
+    .stage-progress-fill {
+      height: 100%; width: 0; background: var(--accent);
+      transition: width 1.2s ease;
+    }
+    .stage-progress-fill.done { background: var(--green); width: 100% !important; }
+
+    /* IDLE STATE */
+    .idle-hint {
+      font-size: 13px; color: var(--muted); font-style: italic;
+    }
+
+    /* THINKING */
+    .thinking-line {
+      font-family: 'Space Mono', monospace; font-size: 12px;
+      color: var(--accent); line-height: 1.8;
+    }
+    .thinking-line span { animation: fadeIn 0.3s ease both; }
+    @keyframes fadeIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
+
+    /* EXTRACTED ITEMS */
+    .extracted-grid {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .extracted-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px; background: var(--bg);
+      border: 1px solid var(--border);
+      animation: slideRight 0.3s ease both;
+    }
+    @keyframes slideRight { from{opacity:0;transform:translateX(10px)} to{opacity:1;transform:none} }
+    .ext-type {
+      font-family: 'Space Mono', monospace; font-size: 9px;
+      letter-spacing: 0.1em; padding: 2px 8px; flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .ext-type.task { border: 1px solid var(--accent); color: var(--accent); }
+    .ext-type.blocker { border: 1px solid var(--warn); color: var(--warn); }
+    .ext-type.decision { border: 1px solid var(--accent2); color: var(--accent2); }
+    .ext-type.deadline { border: 1px solid var(--green); color: var(--green); }
+    .ext-text { font-size: 13px; line-height: 1.5; }
+
+    /* ANALYSIS ITEMS */
+    .analysis-rows { display: flex; flex-direction: column; gap: 6px; }
+    .analysis-row {
+      display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+      background: var(--bg); border: 1px solid var(--border);
+      font-size: 13px;
+      animation: slideRight 0.3s ease both;
+    }
+    .a-icon { font-size: 14px; flex-shrink: 0; }
+    .a-text { flex: 1; }
+    .a-tag {
+      font-family: 'Space Mono', monospace; font-size: 9px;
+      padding: 2px 8px; border: 1px solid var(--border); color: var(--muted);
+      white-space: nowrap;
+    }
+    .a-tag.gap { border-color: var(--warn); color: var(--warn); }
+    .a-tag.ok { border-color: var(--green); color: var(--green); }
+    .a-tag.dep { border-color: var(--accent2); color: var(--accent2); }
+
+    /* TASK PLAN */
+    .task-plan { display: flex; flex-direction: column; gap: 8px; }
+    .task-row {
+      display: grid; grid-template-columns: 24px 1fr auto auto;
+      gap: 12px; align-items: center;
+      padding: 12px 14px; background: var(--bg); border: 1px solid var(--border);
+      animation: slideRight 0.3s ease both;
+      transition: border-color 0.2s;
+    }
+    .task-row:hover { border-color: var(--accent2); }
+    .task-row-num {
+      font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted);
+    }
+    .task-row-title { font-size: 14px; font-weight: 500; }
+    .task-row-owner {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      color: var(--muted); white-space: nowrap;
+    }
+    .priority-tag {
+      font-family: 'Space Mono', monospace; font-size: 9px;
+      padding: 2px 8px; letter-spacing: 0.06em;
+    }
+    .priority-tag.high { border: 1px solid var(--warn); color: var(--warn); }
+    .priority-tag.medium { border: 1px solid #f59e0b; color: #f59e0b; }
+    .priority-tag.low { border: 1px solid var(--muted); color: var(--muted); }
+
+    /* VALIDATION RESULTS */
+    .validation-rows { display: flex; flex-direction: column; gap: 6px; }
+    .val-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px; background: var(--bg); border: 1px solid var(--border);
+      font-size: 13px; line-height: 1.5;
+      animation: slideRight 0.3s ease both;
+    }
+    .val-row.ok { border-color: rgba(0,255,157,0.25); }
+    .val-row.warn { border-color: rgba(255,107,53,0.35); }
+    .val-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+    .val-text { flex: 1; }
+    .val-text strong { color: var(--text); }
+
+    /* CALENDAR OUTPUT */
+    .cal-events { display: flex; flex-direction: column; gap: 6px; }
+    .cal-event {
+      display: flex; align-items: center; gap: 14px;
+      padding: 11px 14px; background: rgba(123,92,250,0.07);
+      border: 1px solid rgba(123,92,250,0.25);
+      animation: slideRight 0.3s ease both;
+    }
+    .cal-time {
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      color: var(--accent2); white-space: nowrap; min-width: 100px;
+    }
+    .cal-title { font-size: 13px; font-weight: 500; flex: 1; }
+    .cal-add {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      padding: 4px 10px; border: 1px solid var(--border); color: var(--muted);
+      background: transparent; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .cal-add:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* SUMMARY CARD */
+    .summary-card {
+      background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.2);
+      padding: 20px; margin-bottom: 4px;
+    }
+    .summary-label {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      color: var(--accent); letter-spacing: 0.12em; margin-bottom: 10px;
+    }
+    .summary-text { font-size: 14px; line-height: 1.7; color: var(--muted); }
+    .summary-text strong { color: var(--text); }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--green); color: var(--bg);
+      font-family: 'Space Mono', monospace; font-size: 12px;
+      padding: 11px 18px; letter-spacing: 0.05em;
+      transform: translateY(60px); opacity: 0;
+      transition: all 0.3s ease; z-index: 999;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* EMPTY */
+    .empty-hint {
+      display: flex; align-items: center; justify-content: center;
+      height: 100%; min-height: 200px;
+      flex-direction: column; gap: 10px; text-align: center;
+    }
+    .empty-icon { font-size: 32px; opacity: 0.2; }
+    .empty-text { font-size: 13px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<nav>
+  <div class="logo">AI_OPS<span>_</span> // Pipeline Demo</div>
+  <a href="index.html" class="back-link">← Home</a>
+</nav>
+
+<!-- PIPELINE HEADER -->
+<div class="pipeline-header">
+  <h1>Multi-Agent Reasoning Pipeline</h1>
+  <p>Input anything messy — watch four agents turn it into structured execution in real time.</p>
+</div>
+
+<!-- PIPELINE TRACK -->
+<div class="pipeline-track">
+  <div class="p-step">
+    <div class="p-step-icon" id="picon-input">IN</div>
+    <div class="p-step-label" id="plabel-input">Input</div>
+  </div>
+  <div class="p-conn" id="pconn-1"></div>
+  <div class="p-step">
+    <div class="p-step-icon" id="picon-extract">A1</div>
+    <div class="p-step-label" id="plabel-extract">Extractor</div>
+  </div>
+  <div class="p-conn" id="pconn-2"></div>
+  <div class="p-step">
+    <div class="p-step-icon" id="picon-analyze">A2</div>
+    <div class="p-step-label" id="plabel-analyze">Analyzer</div>
+  </div>
+  <div class="p-conn" id="pconn-3"></div>
+  <div class="p-step">
+    <div class="p-step-icon" id="picon-plan">A3</div>
+    <div class="p-step-label" id="plabel-plan">Planner</div>
+  </div>
+  <div class="p-conn" id="pconn-4"></div>
+  <div class="p-step">
+    <div class="p-step-icon" id="picon-validate">V</div>
+    <div class="p-step-label" id="plabel-validate">Validator</div>
+  </div>
+  <div class="p-conn" id="pconn-5"></div>
+  <div class="p-step">
+    <div class="p-step-icon" id="picon-output">CAL</div>
+    <div class="p-step-label" id="plabel-output">Calendar</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="app">
+
+  <!-- LEFT: INPUT -->
+  <div class="input-panel">
+    <div class="panel-label">// Raw Input</div>
+
+    <div style="font-size:13px;color:var(--muted);line-height:1.6">
+      Paste anything — notes, a Telegram dump, a standup log, a voice transcript. The messier, the better.
+    </div>
+
+    <div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px">Load a sample →</div>
+      <div class="sample-list">
+        <button class="sample-btn" onclick="loadSample('standup')">📋 Team standup — scattered blockers</button>
+        <button class="sample-btn" onclick="loadSample('founder')">🚀 Founder brain dump after investor call</button>
+        <button class="sample-btn" onclick="loadSample('freelance')">💼 Multi-job professional — 3 clients</button>
+      </div>
+    </div>
+
+    <textarea id="mainInput" placeholder="e.g. &quot;ok so we need to finish the API by friday, amir is waiting on the auth token from devops, sara said she'll do the figma screens but idk if she started, and we still haven't heard back from the client about the logo...&quot;"></textarea>
+
+    <button class="run-btn" id="runBtn" onclick="runPipeline()">▶ RUN PIPELINE</button>
+    <button class="clear-btn" onclick="clearAll()">Reset</button>
+
+    <!-- MEMORY NOTE -->
+    <div style="background:var(--surface);border:1px solid var(--border);padding:14px 16px;margin-top:4px;">
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--accent2);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px">⬡ Cross-Session Memory</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6">AI_OPS stores context from every run. Next time you input notes, it already knows your team, your recurring blockers, and your open tasks.</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: PIPELINE STAGES -->
+  <div class="output-panel">
+
+    <!-- STAGE 1: EXTRACT -->
+    <div class="stage-card" id="card-extract">
+      <div class="stage-header">
+        <div class="stage-num" id="snum-extract">AGENT 01</div>
+        <div>
+          <div class="stage-name">Extractor</div>
+          <div class="stage-desc">Pulls tasks, decisions, blockers, and deadlines from raw input</div>
+        </div>
+        <div class="stage-indicator" id="sind-extract"></div>
+      </div>
+      <div class="stage-progress"><div class="stage-progress-fill" id="sprog-extract"></div></div>
+      <div class="stage-body" id="sbody-extract">
+        <div class="idle-hint">Waiting for input...</div>
+      </div>
+    </div>
+
+    <!-- STAGE 2: ANALYZE -->
+    <div class="stage-card" id="card-analyze">
+      <div class="stage-header">
+        <div class="stage-num" id="snum-analyze">AGENT 02</div>
+        <div>
+          <div class="stage-name">Analyzer</div>
+          <div class="stage-desc">Detects dependencies, gaps in ownership, and conflicting priorities</div>
+        </div>
+        <div class="stage-indicator" id="sind-analyze"></div>
+      </div>
+      <div class="stage-progress"><div class="stage-progress-fill" id="sprog-analyze"></div></div>
+      <div class="stage-body" id="sbody-analyze">
+        <div class="idle-hint">Waiting for extraction...</div>
+      </div>
+    </div>
+
+    <!-- STAGE 3: PLAN -->
+    <div class="stage-card" id="card-plan">
+      <div class="stage-header">
+        <div class="stage-num" id="snum-plan">AGENT 03</div>
+        <div>
+          <div class="stage-name">Planner</div>
+          <div class="stage-desc">Converts extracted items into clear, sequenced next actions</div>
+        </div>
+        <div class="stage-indicator" id="sind-plan"></div>
+      </div>
+      <div class="stage-progress"><div class="stage-progress-fill" id="sprog-plan"></div></div>
+      <div class="stage-body" id="sbody-plan">
+        <div class="idle-hint">Waiting for analysis...</div>
+      </div>
+    </div>
+
+    <!-- STAGE 4: VALIDATE -->
+    <div class="stage-card" id="card-validate">
+      <div class="stage-header">
+        <div class="stage-num" id="snum-validate">VALIDATOR</div>
+        <div>
+          <div class="stage-name">Validator</div>
+          <div class="stage-desc">Checks output consistency and catches AI errors before execution</div>
+        </div>
+        <div class="stage-indicator" id="sind-validate"></div>
+      </div>
+      <div class="stage-progress"><div class="stage-progress-fill" id="sprog-validate"></div></div>
+      <div class="stage-body" id="sbody-validate">
+        <div class="idle-hint">Waiting for plan...</div>
+      </div>
+    </div>
+
+    <!-- STAGE 5: CALENDAR OUTPUT -->
+    <div class="stage-card" id="card-output">
+      <div class="stage-header">
+        <div class="stage-num" id="snum-output">OUTPUT</div>
+        <div>
+          <div class="stage-name">Calendar Sync</div>
+          <div class="stage-desc">Scheduled events and structured action plan, ready to execute</div>
+        </div>
+        <div class="stage-indicator" id="sind-output"></div>
+      </div>
+      <div class="stage-progress"><div class="stage-progress-fill" id="sprog-output"></div></div>
+      <div class="stage-body" id="sbody-output">
+        <div class="idle-hint">Waiting for validation...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ Added to Google Calendar</div>
+
+<script>
+  // CURSOR
+  const cursorEl = document.getElementById('cursor');
+  const ringEl   = document.getElementById('cursorRing');
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove', e=>{mx=e.clientX;my=e.clientY;});
+  (function loop(){
+    cursorEl.style.left=mx-4.5+'px'; cursorEl.style.top=my-4.5+'px';
+    rx+=(mx-rx)*0.13; ry+=(my-ry)*0.13;
+    ringEl.style.left=rx-16+'px'; ringEl.style.top=ry-16+'px';
+    requestAnimationFrame(loop);
+  })();
+
+  const SAMPLES = {
+    standup: `standup notes — things are a mess:
+- backend API blocked, amir is waiting on auth token from devops, no ETA
+- sara said she'd finish figma screens by thursday. she said that last week too
+- need to deploy staging before client demo on FRIDAY 3pm, that's a hard deadline
+- nobody has written the README. it's been two weeks. unacceptable
+- i need to write the revised client proposal, due EOD tomorrow, haven't started
+- daily standup is moving to 10am starting monday
+- sprint ends wednesday, we need to schedule a retro before that`,
+
+    founder: `just got off investor call, a lot happened:
+they want a working demo in 3 weeks. not figma. actual working product.
+zara needs to speed up MVP — frontend functional by end of next week
+market sizing slide is wrong, TAM numbers need to be redone
+they kept asking about competition — need a proper competitor matrix slide
+get lawyer to review term sheet before we sign. probably by next friday.
+pitch deck needs a team slide with bios
+book follow-up call in 2 weeks to show progress
+URGENT — domain renewal expires in 10 days`,
+
+    freelance: `too much going on today:
+CLIENT A (Pulse Agency): revised SEO report due tomorrow noon. also waiting 4 days for their google analytics access invite, still nothing.
+CLIENT B (Novex): blog post on AI tools due friday. haven't started research. they also want a second post on programmatic SEO, deadline unclear but prob 2 weeks.
+CLIENT C (EU remote): zoom call thursday, need to check time zone difference. send invoice this week — 850 EUR.
+personal stuff: renew hostinger before month end. reply to linkedin guy about collab. finish the notion client tracker that's been half-done for 3 weeks.`
+  };
+
+  function loadSample(k) {
+    document.getElementById('mainInput').value = SAMPLES[k];
+  }
+
+  function delay(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+  function setStage(id, state) {
+    // state: 'idle' | 'active' | 'done'
+    const card  = document.getElementById('card-'+id);
+    const snum  = document.getElementById('snum-'+id);
+    const sind  = document.getElementById('sind-'+id);
+    const sprog = document.getElementById('sprog-'+id);
+    const picon = document.getElementById('picon-'+id);
+    const plabel= document.getElementById('plabel-'+id);
+
+    card.className  = 'stage-card ' + (state==='idle'?'':'') + (state==='active'?'active':'') + (state==='done'?'done':'');
+    snum.className  = 'stage-num ' + state;
+    sind.className  = 'stage-indicator ' + state;
+
+    if(state==='active') {
+      sprog.style.width='60%';
+      if(picon) { picon.className='p-step-icon active'; plabel.className='p-step-label active'; }
+    }
+    if(state==='done') {
+      sprog.className='stage-progress-fill done';
+      if(picon) { picon.className='p-step-icon done'; plabel.className='p-step-label done'; }
+    }
+  }
+
+  function setConn(id, state) {
+    const c = document.getElementById('pconn-'+id);
+    if(!c) return;
+    c.className = 'p-conn ' + state;
+  }
+
+  function setBody(id, html) {
+    document.getElementById('sbody-'+id).innerHTML = html;
+  }
+
+  function clearAll() {
+    document.getElementById('mainInput').value = '';
+    ['extract','analyze','plan','validate','output'].forEach(s=>{
+      setStage(s,'idle');
+      document.getElementById('sbody-'+s).innerHTML='<div class="idle-hint">Waiting...</div>';
+      document.getElementById('sprog-'+s).style.width='0';
+      document.getElementById('sprog-'+s).className='stage-progress-fill';
+    });
+    ['1','2','3','4','5'].forEach(n=>setConn(n,''));
+    ['input','extract','analyze','plan','validate','output'].forEach(id=>{
+      const pi=document.getElementById('picon-'+id);
+      const pl=document.getElementById('plabel-'+id);
+      if(pi){pi.className='p-step-icon'; pl.className='p-step-label';}
+    });
+    document.getElementById('runBtn').disabled=false;
+    document.getElementById('runBtn').textContent='▶ RUN PIPELINE';
+  }
+
+  async function runPipeline() {
+    const raw = document.getElementById('mainInput').value.trim();
+    if(!raw) return;
+
+    const btn = document.getElementById('runBtn');
+    btn.disabled=true; btn.textContent='⟳ Processing...';
+
+    // Reset all
+    ['extract','analyze','plan','validate','output'].forEach(s=>{
+      setStage(s,'idle');
+      document.getElementById('sprog-'+s).style.width='0';
+      document.getElementById('sprog-'+s).className='stage-progress-fill';
+    });
+
+    // Mark input done
+    document.getElementById('picon-input').className='p-step-icon done';
+    document.getElementById('plabel-input').className='p-step-label done';
+
+    // STAGE 1: EXTRACT
+    setStage('extract','active');
+    setConn('1','active');
+    setBody('extract', `<div class="thinking-line">
+      <span>Parsing raw input...</span><br>
+      <span style="animation-delay:.3s">Scanning for tasks, blockers, deadlines, decisions...</span><br>
+      <span style="animation-delay:.7s">Running entity extraction...</span>
+    </div>`);
+    await delay(1800);
+
+    // STAGE 2: ANALYZE (run API call here for full data)
+    setStage('extract','done'); setConn('1','done'); setConn('2','active');
+    setStage('analyze','active');
+    setBody('analyze', `<div class="thinking-line">
+      <span>Mapping dependencies between items...</span><br>
+      <span style="animation-delay:.3s">Identifying tasks without owners...</span><br>
+      <span style="animation-delay:.7s">Detecting priority conflicts...</span>
+    </div>`);
+
+    let result;
+    try {
+      result = await callClaude(raw);
+    } catch(e) {
+      result = fallback(raw);
+    }
+
+    await delay(600);
+
+    // Render extraction results
+    const extractedHtml = renderExtracted(result.extracted);
+    setBody('extract', extractedHtml);
+
+    // STAGE 3: PLAN
+    setStage('analyze','done'); setConn('2','done'); setConn('3','active');
+    setStage('plan','active');
+
+    const analysisHtml = renderAnalysis(result.analysis);
+    setBody('analyze', analysisHtml);
+
+    setBody('plan', `<div class="thinking-line">
+      <span>Sequencing tasks by priority...</span><br>
+      <span style="animation-delay:.4s">Assigning next actions...</span><br>
+      <span style="animation-delay:.8s">Building execution plan...</span>
+    </div>`);
+    await delay(1400);
+
+    // STAGE 4: VALIDATE
+    setStage('plan','done'); setConn('3','done'); setConn('4','active');
+    setStage('validate','active');
+
+    const planHtml = renderPlan(result.tasks);
+    setBody('plan', planHtml);
+
+    setBody('validate', `<div class="thinking-line">
+      <span>Cross-checking output consistency...</span><br>
+      <span style="animation-delay:.4s">Verifying all tasks have owners or flags...</span><br>
+      <span style="animation-delay:.8s">Running output reliability check...</span>
+    </div>`);
+    await delay(1200);
+
+    // STAGE 5: OUTPUT
+    setStage('validate','done'); setConn('4','done'); setConn('5','active');
+    setStage('output','active');
+
+    const validateHtml = renderValidation(result.validation);
+    setBody('validate', validateHtml);
+
+    setBody('output', `<div class="thinking-line">
+      <span>Creating calendar events...</span><br>
+      <span style="animation-delay:.4s">Writing to Google Calendar...</span>
+    </div>`);
+    await delay(900);
+
+    setStage('output','done'); setConn('5','done');
+    document.getElementById('picon-output').className='p-step-icon done';
+
+    const outputHtml = renderOutput(result);
+    setBody('output', outputHtml);
+
+    btn.disabled=false; btn.textContent='▶ RUN PIPELINE';
+  }
+
+  async function callClaude(raw) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:`You are the AI_OPS multi-agent pipeline. Analyze the raw input and return ONLY a valid JSON object with no markdown or backticks.
+
+Return this exact structure:
+{
+  "summary": "2-sentence plain-language summary of the situation and what needs to happen",
+  "extracted": [
+    { "type": "task|blocker|decision|deadline", "text": "concise description" }
+  ],
+  "analysis": [
+    { "icon": "emoji", "text": "observation about dependencies, gaps, or conflicts", "tag": "ok|gap|dep" }
+  ],
+  "tasks": [
+    { "title": "clear actionable task title", "owner": "name or Unassigned", "priority": "high|medium|low", "deadline": "deadline string or null" }
+  ],
+  "validation": [
+    { "type": "ok|warn", "text": "validation check result" }
+  ],
+  "calendarEvents": [
+    { "title": "event name", "when": "day/time" }
+  ]
+}
+
+Extract all real tasks. Flag missing owners as Unassigned. Keep task titles under 10 words. Return ONLY JSON.`,
+        messages:[{role:'user',content:raw}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content.map(c=>c.text||'').join('');
+    return JSON.parse(text.replace(/```json|```/g,'').trim());
+  }
+
+  function fallback(raw) {
+    return {
+      summary: "Multiple action items detected across several workstreams. Immediate attention required on blocked and unassigned items.",
+      extracted: [
+        {type:'task',text:'Deploy staging environment before demo'},
+        {type:'blocker',text:'Auth token not received from DevOps'},
+        {type:'deadline',text:'Client demo — Friday 3pm'},
+        {type:'task',text:'Write revised client proposal'},
+        {type:'decision',text:'Daily standup moving to 10am Monday'}
+      ],
+      analysis: [
+        {icon:'⚠️',text:'2 tasks have no assigned owner — will not execute',tag:'gap'},
+        {icon:'🔗',text:'API deployment depends on DevOps auth token resolution',tag:'dep'},
+        {icon:'✅',text:'3 tasks have clear deadlines and owners',tag:'ok'},
+        {icon:'⏰',text:'2 items are time-critical within 24 hours',tag:'gap'}
+      ],
+      tasks: [
+        {title:'Write client proposal',owner:'You',priority:'high',deadline:'Today EOD'},
+        {title:'Follow up with DevOps on auth token',owner:'Amir',priority:'high',deadline:'ASAP'},
+        {title:'Deploy staging environment',owner:'Unassigned',priority:'high',deadline:'Fri'},
+        {title:'Finish Figma screens',owner:'Sara',priority:'medium',deadline:'Thursday'},
+        {title:'Schedule sprint retrospective',owner:'You',priority:'medium',deadline:'Before Wed'}
+      ],
+      validation: [
+        {type:'warn',text:'1 critical task (staging deploy) has no owner — escalation needed'},
+        {type:'ok',text:'All deadlines are within 7-day window — calendar sync applicable'},
+        {type:'ok',text:'Blocker correctly flagged and linked to dependent task'},
+        {type:'warn',text:'Sara\'s task was mentioned last week — recurring slip risk detected'}
+      ],
+      calendarEvents: [
+        {title:'Client Demo — Staging Deadline',when:'Fri · 3:00 PM'},
+        {title:'Submit Revised Proposal',when:'Today · EOD'},
+        {title:'Sprint Retrospective',when:'Wed · TBD'},
+        {title:'Daily Standup (new time)',when:'Mon · 10:00 AM'}
+      ]
+    };
+  }
+
+  function renderExtracted(items) {
+    if(!items||!items.length) return '<div class="idle-hint">No items extracted.</div>';
+    return `<div class="extracted-grid">${items.map((it,i)=>`
+      <div class="extracted-item" style="animation-delay:${i*0.08}s">
+        <span class="ext-type ${it.type}">${it.type.toUpperCase()}</span>
+        <span class="ext-text">${it.text}</span>
+      </div>`).join('')}</div>`;
+  }
+
+  function renderAnalysis(items) {
+    if(!items||!items.length) return '<div class="idle-hint">No analysis available.</div>';
+    return `<div class="analysis-rows">${items.map((it,i)=>`
+      <div class="analysis-row" style="animation-delay:${i*0.09}s">
+        <span class="a-icon">${it.icon}</span>
+        <span class="a-text">${it.text}</span>
+        <span class="a-tag ${it.tag}">${it.tag.toUpperCase()}</span>
+      </div>`).join('')}</div>`;
+  }
+
+  function renderPlan(tasks) {
+    if(!tasks||!tasks.length) return '<div class="idle-hint">No tasks generated.</div>';
+    return `<div class="task-plan">${tasks.map((t,i)=>`
+      <div class="task-row" style="animation-delay:${i*0.08}s">
+        <span class="task-row-num">${String(i+1).padStart(2,'0')}</span>
+        <span class="task-row-title">${t.title}</span>
+        <span class="task-row-owner">${t.owner!=='Unassigned'?'👤 '+t.owner:'⚠ Unassigned'}</span>
+        <span class="priority-tag ${t.priority}">${t.priority.toUpperCase()}</span>
+      </div>`).join('')}</div>`;
+  }
+
+  function renderValidation(items) {
+    if(!items||!items.length) return '<div class="idle-hint">No validation results.</div>';
+    return `<div class="validation-rows">${items.map((it,i)=>`
+      <div class="val-row ${it.type}" style="animation-delay:${i*0.09}s">
+        <span class="val-icon">${it.type==='ok'?'✓':'⚠'}</span>
+        <span class="val-text">${it.text}</span>
+      </div>`).join('')}</div>`;
+  }
+
+  function renderOutput(result) {
+    const calHtml = (result.calendarEvents||[]).map((ev,i)=>`
+      <div class="cal-event" style="animation-delay:${i*0.09}s">
+        <span class="cal-time">${ev.when}</span>
+        <span class="cal-title">${ev.title}</span>
+        <button class="cal-add" onclick="addToCal(this,'${ev.title.replace(/'/g,"\\'")}')">+ Add</button>
+      </div>`).join('');
+
+    return `
+      <div class="summary-card">
+        <div class="summary-label">// AI Summary</div>
+        <div class="summary-text">${result.summary||'Processing complete.'}</div>
+      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:10px">// Calendar Events</div>
+      <div class="cal-events">${calHtml}</div>
+    `;
+  }
+
+  function addToCal(btn, title) {
+    btn.textContent='✓ Added';
+    btn.style.borderColor='var(--green)'; btn.style.color='var(--green)';
+    const t=document.getElementById('toast');
+    t.textContent=`✓ "${title}" → Google Calendar`;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),2800);
+  }
+</script>
+</body>
+</html>

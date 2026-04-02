@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI_OPS — Multi-Agent Task Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #080c10;
+      --surface: #0d1219;
+      --surface2: #111820;
+      --border: #1a2535;
+      --accent: #00e5ff;
+      --accent2: #7b5cfa;
+      --warn: #ff6b35;
+      --text: #e8edf2;
+      --muted: #556880;
+      --green: #00ff9d;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      overflow-x: hidden;
+      cursor: none;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .cursor {
+      position: fixed; width: 9px; height: 9px;
+      background: var(--accent); border-radius: 50%;
+      pointer-events: none; z-index: 9999; mix-blend-mode: screen;
+    }
+    .cursor-ring {
+      position: fixed; width: 32px; height: 32px;
+      border: 1px solid rgba(0,229,255,0.5); border-radius: 50%;
+      pointer-events: none; z-index: 9998;
+    }
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 56px;
+      background: rgba(8,12,16,0.9);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 14px; font-weight: 700;
+      color: var(--accent); letter-spacing: 0.05em;
+    }
+    .logo span { color: var(--muted); }
+    nav ul { list-style: none; display: flex; gap: 32px; }
+    nav ul a {
+      font-size: 14px; font-weight: 500;
+      color: var(--muted); text-decoration: none; transition: color 0.2s;
+    }
+    nav ul a:hover { color: var(--text); }
+    .nav-cta {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px; padding: 9px 20px;
+      border: 1px solid var(--accent); color: var(--accent);
+      background: transparent; cursor: none;
+      letter-spacing: 0.04em; text-decoration: none; transition: all 0.2s;
+    }
+    .nav-cta:hover { background: var(--accent); color: var(--bg); }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 140px 56px 80px;
+      position: relative; overflow: hidden; text-align: center;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.035) 1px, transparent 1px);
+      background-size: 64px 64px;
+      animation: gridPan 24s linear infinite;
+    }
+    @keyframes gridPan { from{background-position:0 0} to{background-position:64px 64px} }
+    .hero-glow {
+      position: absolute; width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(0,229,255,0.06) 0%, transparent 65%);
+      border-radius: 50%; pointer-events: none;
+      top: 50%; left: 50%; transform: translate(-50%,-50%);
+      animation: gPulse 5s ease-in-out infinite;
+    }
+    @keyframes gPulse {
+      0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.7}
+      50%{transform:translate(-50%,-50%) scale(1.1);opacity:1}
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      color: var(--green); letter-spacing: 0.1em; margin-bottom: 24px;
+      animation: fadeUp 0.5s ease both;
+    }
+    .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 8px var(--green);
+      animation: livePulse 1.5s ease-in-out infinite;
+    }
+    @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .hero-tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; letter-spacing: 0.15em; color: var(--accent);
+      text-transform: uppercase; border: 1px solid rgba(0,229,255,0.25);
+      padding: 5px 14px; display: inline-block; margin-bottom: 26px;
+      animation: fadeUp 0.5s 0.05s ease both;
+    }
+    .hero h1 {
+      font-size: clamp(40px, 6vw, 76px);
+      font-weight: 700; line-height: 1.08; letter-spacing: -0.025em;
+      animation: fadeUp 0.5s 0.1s ease both;
+    }
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(100deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero-sub {
+      max-width: 520px; margin: 22px auto 0;
+      font-size: 17px; line-height: 1.7; color: var(--muted); font-weight: 400;
+      animation: fadeUp 0.5s 0.15s ease both;
+    }
+    .hero-actions {
+      display: flex; gap: 14px; justify-content: center; margin-top: 36px;
+      animation: fadeUp 0.5s 0.2s ease both;
+    }
+    .btn-primary {
+      font-family: 'Space Mono', monospace; font-size: 12px; padding: 13px 28px;
+      background: var(--accent); color: var(--bg); border: none; cursor: none;
+      font-weight: 700; letter-spacing: 0.05em; text-decoration: none;
+      transition: all 0.2s; display: inline-block;
+    }
+    .btn-primary:hover { background: #fff; transform: translateY(-2px); }
+    .btn-ghost {
+      font-family: 'Space Mono', monospace; font-size: 12px; padding: 13px 28px;
+      border: 1px solid var(--border); color: var(--muted); cursor: none;
+      letter-spacing: 0.05em; text-decoration: none; transition: all 0.2s; display: inline-block;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .agent-flow {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; margin-top: 60px; flex-wrap: wrap;
+      animation: fadeUp 0.5s 0.25s ease both;
+    }
+    .agent-node {
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 12px 18px; text-align: center; min-width: 120px;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+    .agent-node:hover { border-color: var(--accent); transform: translateY(-3px); }
+    .agent-node-label {
+      font-family: 'Space Mono', monospace; font-size: 8px;
+      letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-bottom: 5px;
+    }
+    .agent-node-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .agent-arrow {
+      width: 32px; height: 1px; background: var(--border);
+      position: relative; flex-shrink: 0;
+    }
+    .agent-arrow::after {
+      content: '▶'; position: absolute; right: -4px; top: -7px;
+      font-size: 9px; color: var(--accent);
+    }
+    .agent-node.active { border-color: var(--accent); }
+    .agent-node.active .agent-node-name { color: var(--accent); }
+    @keyframes fadeUp {
+      from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)}
+    }
+
+    /* STATS BAR */
+    .stats-bar {
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 40px 56px;
+      display: flex; justify-content: center; gap: 72px; flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-val {
+      font-family: 'Space Mono', monospace;
+      font-size: 38px; font-weight: 700; color: var(--accent); letter-spacing: -0.02em;
+    }
+    .stat-val.green { color: var(--green); }
+    .stat-val.purple { color: var(--accent2); }
+    .stat-label { font-size: 13px; color: var(--muted); margin-top: 5px; font-weight: 400; }
+
+    /* SECTIONS */
+    .section-wrap { padding: 96px 56px; max-width: 1120px; margin: 0 auto; }
+    .section-tag {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      letter-spacing: 0.16em; color: var(--accent);
+      text-transform: uppercase; margin-bottom: 14px;
+    }
+    h2 {
+      font-size: clamp(28px, 3.5vw, 46px);
+      font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 16px;
+    }
+    .section-sub {
+      font-size: 16px; color: var(--muted); max-width: 480px;
+      line-height: 1.7; margin-bottom: 48px; font-weight: 400;
+    }
+
+    /* PAIN STATS */
+    .pain-stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1px; background: var(--border); margin-bottom: 48px;
+    }
+    .pain-stat { background: var(--surface); padding: 32px 28px; transition: background 0.2s; }
+    .pain-stat:hover { background: var(--surface2); }
+    .pain-stat-num {
+      font-family: 'Space Mono', monospace; font-size: 42px; font-weight: 700;
+      line-height: 1; letter-spacing: -0.02em; margin-bottom: 10px;
+    }
+    .pain-stat-num.c1 { color: var(--warn); }
+    .pain-stat-num.c2 { color: var(--accent); }
+    .pain-stat-num.c3 { color: var(--accent2); }
+    .pain-stat-num.c4 { color: var(--green); }
+    .pain-stat h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+    .pain-stat p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* PAIN CARDS */
+    .pain-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1px; background: var(--border);
+    }
+    .pain-card { background: var(--surface); padding: 28px 24px; transition: background 0.2s; }
+    .pain-card:hover { background: var(--surface2); }
+    .pain-icon { font-size: 20px; margin-bottom: 14px; }
+    .pain-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+    .pain-card p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* SEGMENT */
+    .segment-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
+    }
+    .segment-card {
+      border: 1px solid var(--border); padding: 24px 20px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .segment-card:hover { border-color: var(--accent2); transform: translateY(-3px); }
+    .seg-icon { font-size: 22px; margin-bottom: 12px; }
+    .seg-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    .seg-desc { font-size: 13px; color: var(--muted); line-height: 1.55; }
+
+    /* PIPELINE */
+    .pipeline {
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 44px; position: relative; overflow: hidden;
+    }
+    .pipeline-line {
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+      animation: scanline 3s ease-in-out infinite;
+    }
+    @keyframes scanline { 0%,100%{opacity:0.3} 50%{opacity:1} }
+    .pipeline-steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; margin-top: 12px; }
+    .step-num {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      color: var(--accent); letter-spacing: 0.1em; margin-bottom: 10px; font-weight: 700;
+    }
+    .step-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .step-desc { font-size: 13px; color: var(--muted); line-height: 1.65; }
+    .step-tag {
+      display: inline-block; margin-top: 14px;
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      padding: 3px 10px; border: 1px solid var(--accent2);
+      color: var(--accent2); letter-spacing: 0.06em;
+    }
+
+    /* VALIDATION */
+    .validation-section { border-top: 1px solid var(--border); background: var(--surface); }
+    .validation-inner {
+      max-width: 1120px; margin: 0 auto; padding: 96px 56px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start;
+    }
+    .val-right {
+      background: var(--bg); border: 1px solid var(--border);
+      display: flex; flex-direction: column; min-height: 480px;
+    }
+    .val-chat-header {
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .val-chat-header-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 6px var(--green);
+      animation: livePulse 1.5s ease-in-out infinite;
+    }
+    .val-chat-title {
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      color: var(--accent); letter-spacing: 0.08em;
+    }
+    .val-chat-body {
+      flex: 1; padding: 18px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 12px;
+      min-height: 300px; max-height: 360px;
+    }
+    .chat-msg {
+      max-width: 86%; padding: 11px 14px;
+      font-size: 14px; line-height: 1.55;
+      animation: fadeUp 0.3s ease both;
+    }
+    .chat-msg.ai {
+      background: rgba(0,229,255,0.07); border: 1px solid rgba(0,229,255,0.15);
+      color: var(--text); align-self: flex-start;
+    }
+    .chat-msg.ai .ai-label {
+      font-family: 'Space Mono', monospace; font-size: 9px;
+      color: var(--accent); letter-spacing: 0.1em;
+      display: block; margin-bottom: 5px;
+    }
+    .chat-msg.user {
+      background: rgba(123,92,250,0.1); border: 1px solid rgba(123,92,250,0.2);
+      color: var(--text); align-self: flex-end;
+    }
+    .val-chat-input-area {
+      padding: 12px 14px; border-top: 1px solid var(--border); display: flex; gap: 10px;
+    }
+    .val-input {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
+      padding: 10px 14px; outline: none; transition: border-color 0.2s;
+    }
+    .val-input:focus { border-color: var(--accent); }
+    .val-input::placeholder { color: var(--muted); }
+    .val-send {
+      background: var(--accent); color: var(--bg); border: none; padding: 10px 16px;
+      cursor: pointer; font-family: 'Space Mono', monospace; font-size: 11px;
+      font-weight: 700; letter-spacing: 0.05em; transition: all 0.2s;
+    }
+    .val-send:hover:not(:disabled) { background: #fff; }
+    .val-send:disabled { opacity: 0.4; cursor: not-allowed; }
+    .question-chips { display: flex; flex-direction: column; gap: 8px; margin-top: 28px; }
+    .chips-label {
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 2px;
+    }
+    .q-chip {
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      padding: 10px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px;
+      text-align: left; cursor: pointer; transition: all 0.18s; line-height: 1.45;
+    }
+    .q-chip:hover { border-color: var(--accent); color: var(--text); }
+    .q-chip.used { opacity: 0.35; pointer-events: none; }
+    .typing-dots {
+      display: inline-flex; gap: 4px; align-items: center; padding: 4px 0;
+    }
+    .typing-dots span {
+      width: 5px; height: 5px; border-radius: 50%; background: var(--accent); opacity: 0.4;
+      animation: typingBounce 1s ease-in-out infinite;
+    }
+    .typing-dots span:nth-child(2){animation-delay:.2s}
+    .typing-dots span:nth-child(3){animation-delay:.4s}
+    @keyframes typingBounce {
+      0%,80%,100%{transform:translateY(0);opacity:0.4} 40%{transform:translateY(-5px);opacity:1}
+    }
+
+    /* CTA */
+    .cta-section {
+      text-align: center; padding: 100px 56px;
+      position: relative; overflow: hidden; border-top: 1px solid var(--border);
+    }
+    .cta-section::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 120%, rgba(123,92,250,0.1), transparent 65%);
+    }
+    .cta-section h2 { font-size: clamp(30px,4.5vw,54px); }
+    .cta-section p { font-size: 16px; color: var(--muted); margin: 18px auto 40px; max-width: 420px; line-height: 1.7; }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border); padding: 24px 56px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+    }
+    footer p { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.05em; }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--accent); }
+
+    @media (max-width: 900px) {
+      nav { padding: 16px 20px; }
+      nav ul { display: none; }
+      .hero, .section-wrap, footer, .cta-section { padding-left: 20px; padding-right: 20px; }
+      .pipeline-steps { grid-template-columns: 1fr; }
+      .validation-inner { grid-template-columns: 1fr; padding: 48px 20px; gap: 36px; }
+      .stats-bar { gap: 36px; padding: 32px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<nav>
+  <div class="logo">AI_OPS<span>_</span></div>
+  <ul>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#solution">Solution</a></li>
+    <li><a href="#segment">Who It's For</a></li>
+    <li><a href="#validate">Validate</a></li>
+    <li><a href="demo.html">Demo</a></li>
+  </ul>
+  <a href="demo.html" class="nav-cta">Try Demo →</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-badge"><span class="live-dot"></span>MULTI-AGENT INTELLIGENCE PLATFORM</div>
+  <div class="hero-tag">AI_OPS // v1.0 — Hackathon Build</div>
+  <h1>Stop managing chaos.<br /><em>Let agents do it.</em></h1>
+  <p class="hero-sub">Captures tasks from your messy notes and chats, validates them with multi-agent reasoning, and syncs to Google Calendar — with memory that persists across every session.</p>
+  <div class="hero-actions">
+    <a href="demo.html" class="btn-primary">Run the Demo</a>
+    <a href="#problem" class="btn-ghost">See the Problem</a>
+  </div>
+  <div class="agent-flow">
+    <div class="agent-node active">
+      <div class="agent-node-label">Agent 01</div>
+      <div class="agent-node-name">Extractor</div>
+    </div>
+    <div class="agent-arrow"></div>
+    <div class="agent-node">
+      <div class="agent-node-label">Agent 02</div>
+      <div class="agent-node-name">Validator</div>
+    </div>
+    <div class="agent-arrow"></div>
+    <div class="agent-node">
+      <div class="agent-node-label">Agent 03</div>
+      <div class="agent-node-name">Planner</div>
+    </div>
+    <div class="agent-arrow"></div>
+    <div class="agent-node">
+      <div class="agent-node-label">Memory</div>
+      <div class="agent-node-name">Context DB</div>
+    </div>
+    <div class="agent-arrow"></div>
+    <div class="agent-node">
+      <div class="agent-node-label">Output</div>
+      <div class="agent-node-name">Calendar ↗</div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-val" data-target="73">73</div>
+    <div class="stat-label">% of tasks lost in chat within 24h</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val green" data-target="3">3</div>
+    <div class="stat-label">Reasoning agents validating output</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val purple" data-target="5">5</div>
+    <div class="stat-label">Avg tools a multi-professional juggles</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" data-target="0">0</div>
+    <div class="stat-label">Manual calendar entries needed</div>
+  </div>
+</div>
+
+<!-- PROBLEM -->
+<div class="section-wrap" id="problem">
+  <div class="section-tag">// The Problem</div>
+  <h2>The "don't forget this"<br />loop is exhausting you</h2>
+  <p class="section-sub">It's not about lacking tools — you have too many. The problem is that none of them think.</p>
+
+  <div class="pain-stats">
+    <div class="pain-stat">
+      <div class="pain-stat-num c1">5+</div>
+      <h3>Disconnected Tools</h3>
+      <p>Telegram, Slack, Notion, Docs, email — each holding a fragment. No central brain tying them together.</p>
+    </div>
+    <div class="pain-stat">
+      <div class="pain-stat-num c2">~2h</div>
+      <h3>Daily Mental Overhead</h3>
+      <p>Reconstructing context from scattered notes each morning. The invisible "what was I doing?" tax.</p>
+    </div>
+    <div class="pain-stat">
+      <div class="pain-stat-num c3">68%</div>
+      <h3>Tasks Without Owners</h3>
+      <p>In teams, the majority of extracted action items have no assigned person — they simply vanish.</p>
+    </div>
+    <div class="pain-stat">
+      <div class="pain-stat-num c4">0</div>
+      <h3>Tools That Reason</h3>
+      <p>Trello, Jira, Notion — passive storage. None detect blockers, infer deadlines, or validate structure.</p>
+    </div>
+  </div>
+
+  <div class="pain-grid">
+    <div class="pain-card">
+      <div class="pain-icon">🧠</div>
+      <h3>Context Loss</h3>
+      <p>Decisions get made but the reasoning vanishes. Weeks later nobody knows why something was deprioritised.</p>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">👻</div>
+      <h3>Illusion of Clarity</h3>
+      <p>The plan exists in someone's head — no next actions, no owners, no record. It fails silently.</p>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">🔁</div>
+      <h3>Manual Re-entry</h3>
+      <p>Every calendar event, task card, and reminder typed in by hand. Completely unscalable.</p>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">⛔</div>
+      <h3>Undetected Blockers</h3>
+      <p>A task stalls because someone "isn't familiar with the code" — nobody escalates until the deadline passes.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SOLUTION -->
+<div class="section-wrap" id="solution">
+  <div class="section-tag">// The Solution</div>
+  <h2>Three agents.<br />One operational brain.</h2>
+  <p class="section-sub">Not another AI wrapper. A reasoning pipeline that validates its own output before it touches your calendar.</p>
+  <div class="pipeline">
+    <div class="pipeline-line"></div>
+    <div class="pipeline-steps">
+      <div class="pipeline-step">
+        <div class="step-num">AGENT 01 — EXTRACTOR</div>
+        <div class="step-title">Parse Raw Input</div>
+        <div class="step-desc">Takes unstructured notes, Telegram dumps, voice transcripts. Pulls structured facts: tasks, decisions, blockers, deadlines, owners.</div>
+        <span class="step-tag">NLP + LLM</span>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">AGENT 02 — VALIDATOR</div>
+        <div class="step-title">Catch Errors First</div>
+        <div class="step-desc">Detects orphaned tasks with no owner, schedule conflicts, missing next-actions. Refuses to proceed without a clear assignee.</div>
+        <span class="step-tag">Multi-Agent Check</span>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">AGENT 03 — PLANNER</div>
+        <div class="step-title">Sequence & Sync</div>
+        <div class="step-desc">Suggests priority order, creates Google Calendar events automatically, stores session context so nothing is lost next time.</div>
+        <span class="step-tag">Calendar API + Memory</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SEGMENT -->
+<div class="section-wrap" id="segment">
+  <div class="section-tag">// Who It's For</div>
+  <h2>Built for multi-professionals<br />managing too much at once</h2>
+  <p class="section-sub">People who hold several roles simultaneously — and need a system that keeps up with all of them.</p>
+  <div class="segment-grid">
+    <div class="segment-card">
+      <div class="seg-icon">🚀</div>
+      <div class="seg-title">Solo Founders</div>
+      <div class="seg-desc">Running product, sales, ops, and support simultaneously. Tasks live everywhere except one place.</div>
+    </div>
+    <div class="segment-card">
+      <div class="seg-icon">💼</div>
+      <div class="seg-title">Multi-Job Professionals</div>
+      <div class="seg-desc">Holding 2–3 clients or jobs at once. Deadlines from different contexts collide without warning.</div>
+    </div>
+    <div class="segment-card">
+      <div class="seg-icon">📐</div>
+      <div class="seg-title">Startup Team Leads</div>
+      <div class="seg-desc">Tech leads and PMs juggling delivery, blockers, stand-ups, and stakeholder updates in parallel.</div>
+    </div>
+    <div class="segment-card">
+      <div class="seg-icon">🎓</div>
+      <div class="seg-title">Academic + Freelance</div>
+      <div class="seg-desc">Teaching, researching, and client work at once. Long-horizon deadlines compete with daily fires.</div>
+    </div>
+    <div class="segment-card">
+      <div class="seg-icon">⚙️</div>
+      <div class="seg-title">Operations Managers</div>
+      <div class="seg-desc">Coordinating across teams with no single source of truth. Context disappears between meetings.</div>
+    </div>
+    <div class="segment-card">
+      <div class="seg-icon">🏆</div>
+      <div class="seg-title">Hackathon Teams</div>
+      <div class="seg-desc">72 hours to build something real. Every minute lost to task management is a minute not building.</div>
+    </div>
+  </div>
+</div>
+
+<!-- VALIDATION -->
+<div class="validation-section" id="validate">
+  <div class="validation-inner">
+    <div class="val-left">
+      <div class="section-tag">// Does This Resonate?</div>
+      <h2>Answer a few questions.<br />Get an honest fit assessment.</h2>
+      <p class="section-sub" style="margin-bottom:24px;">
+        These are the core validation questions we tested with real professionals. Tap one — or describe your own situation — and the AI will tell you whether AI_OPS actually solves your problem.
+      </p>
+      <div class="chips-label">Tap a question to start →</div>
+      <div class="question-chips">
+        <button class="q-chip" onclick="sendPreset(this, 'How many different tools do you currently use to track your tasks across your jobs or clients?')">
+          How many tools do you use to track tasks across your work?
+        </button>
+        <button class="q-chip" onclick="sendPreset(this, 'Do you manage multiple jobs, clients, or roles simultaneously? If so, how do you keep track of everything?')">
+          Do you manage multiple jobs or roles at the same time?
+        </button>
+        <button class="q-chip" onclick="sendPreset(this, 'How often do tasks or follow-ups get lost after a conversation in Telegram, Slack, or chat?')">
+          How often do tasks get lost after a conversation in chats?
+        </button>
+        <button class="q-chip" onclick="sendPreset(this, 'How much time do you spend manually creating calendar events or task cards from notes and conversations?')">
+          How much time goes into manually entering tasks and events?
+        </button>
+        <button class="q-chip" onclick="sendPreset(this, 'Have you ever missed a deadline or forgotten a follow-up because context was lost between sessions?')">
+          Have you missed deadlines due to lost context between sessions?
+        </button>
+      </div>
+    </div>
+    <div class="val-right">
+      <div class="val-chat-header">
+        <div class="val-chat-header-dot"></div>
+        <div class="val-chat-title">AI_OPS VALIDATOR — LIVE</div>
+      </div>
+      <div class="val-chat-body" id="chatBody">
+        <div class="chat-msg ai">
+          <span class="ai-label">AI_OPS</span>
+          Hi — I'm the AI_OPS validation assistant. Tap a question on the left, or describe your own workflow below. I'll give you an honest assessment of whether AI_OPS actually fits your situation.
+        </div>
+      </div>
+      <div class="val-chat-input-area">
+        <input class="val-input" id="valInput" placeholder="Or describe your situation..." onkeydown="if(event.key==='Enter')sendMessage()" />
+        <button class="val-send" id="valSend" onclick="sendMessage()">SEND</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+  <div class="section-tag" style="display:block;margin-bottom:16px">// Ready?</div>
+  <h2>See it process<br />your actual notes</h2>
+  <p>Paste a Telegram dump, voice transcript, or brain dump. Watch three agents structure it in real time.</p>
+  <a href="demo.html" class="btn-primary" style="font-size:13px;padding:15px 36px;">Open Demo Interface →</a>
+</div>
+
+<footer>
+  <div class="logo">AI_OPS<span>_</span></div>
+  <p>Built for IT Community Uzbekistan · 2025</p>
+  <div class="footer-links">
+    <a href="index.html">Home</a>
+    <a href="demo.html">Demo</a>
+    <a href="dashboard.html">Dashboard</a>
+  </div>
+</footer>
+
+<script>
+  // CURSOR
+  const cursor = document.getElementById('cursor');
+  const ring   = document.getElementById('cursorRing');
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; });
+  (function animC(){
+    cursor.style.left = mx-4.5+'px'; cursor.style.top = my-4.5+'px';
+    rx += (mx-rx)*0.13; ry += (my-ry)*0.13;
+    ring.style.left = rx-16+'px'; ring.style.top = ry-16+'px';
+    requestAnimationFrame(animC);
+  })();
+
+  // STAT COUNTERS
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const el = e.target;
+      const target = parseFloat(el.dataset.target);
+      if (isNaN(target)) return;
+      let cur = 0; const steps = 40; const inc = target/steps;
+      const id = setInterval(()=>{
+        cur = Math.min(cur+inc, target);
+        el.textContent = Math.round(cur);
+        if(cur>=target) clearInterval(id);
+      }, 35);
+      obs.unobserve(el);
+    });
+  }, {threshold:0.5});
+  document.querySelectorAll('.stat-val[data-target]').forEach(s=>obs.observe(s));
+
+  // AGENT CYCLE
+  const nodes = document.querySelectorAll('.agent-node');
+  let ai = 0;
+  setInterval(()=>{
+    nodes.forEach(n=>n.classList.remove('active'));
+    ai=(ai+1)%nodes.length;
+    nodes[ai].classList.add('active');
+  }, 1100);
+
+  // CHAT
+  const chatBody = document.getElementById('chatBody');
+  const valInput = document.getElementById('valInput');
+  const valSend  = document.getElementById('valSend');
+
+  function addMsg(text, role) {
+    const div = document.createElement('div');
+    div.className = 'chat-msg '+role;
+    if(role==='ai') div.innerHTML=`<span class="ai-label">AI_OPS</span>${text}`;
+    else div.textContent = text;
+    chatBody.appendChild(div);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    return div;
+  }
+  function addTyping() {
+    const div = document.createElement('div');
+    div.className = 'chat-msg ai';
+    div.innerHTML = `<span class="ai-label">AI_OPS</span><div class="typing-dots"><span></span><span></span><span></span></div>`;
+    chatBody.appendChild(div);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    return div;
+  }
+  function sendPreset(btn, text) {
+    btn.classList.add('used');
+    valInput.value = text;
+    sendMessage();
+  }
+  async function sendMessage() {
+    const text = valInput.value.trim();
+    if(!text) return;
+    valInput.value = '';
+    valSend.disabled = true;
+    addMsg(text, 'user');
+    const typingEl = addTyping();
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: `You are AI_OPS's validation assistant on the product landing page. Your role is a short, honest conversation with a potential user to assess whether AI_OPS genuinely fits their situation.
+
+AI_OPS is a multi-agent task intelligence platform for multi-professionals — people holding several jobs, clients, or roles simultaneously. It captures messy input (notes, Telegram, voice memos), extracts structured tasks with owners and deadlines using a 3-agent pipeline (Extractor → Validator → Planner), auto-syncs to Google Calendar, and maintains cross-session memory.
+
+Guidelines:
+- Respond in 3–5 sentences max. Conversational, direct, no bullet points.
+- If their pain clearly matches: validate it, name the specific feature that addresses it.
+- If their pain is mild or edge-case: be honest — say what fits and what might not.
+- Occasionally ask one follow-up question to go deeper.
+- Never be salesy. Honesty builds trust.`,
+          messages: [{ role:'user', content: text }]
+        })
+      });
+      const data = await res.json();
+      const reply = data.content.map(c=>c.text||'').join('');
+      typingEl.remove();
+      addMsg(reply, 'ai');
+    } catch(err) {
+      typingEl.remove();
+      addMsg("API not connected in this preview — but in the live build I'd assess your workflow and tell you exactly where AI_OPS fits.", 'ai');
+    }
+    valSend.disabled = false;
+    valInput.focus();
+  }
+</script>
+</body>
+</html>
